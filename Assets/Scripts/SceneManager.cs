@@ -1,24 +1,15 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
-public class SceneManager : MonoBehaviour
+public class SceneManager : Singleton<SceneManager>
 {
-    public static SceneManager Instance;
 
     public Player Player;
-    public List<Enemie> Enemies;
+    public EnemiesManager EnemiesManager = new();
     public GameObject Lose;
     public GameObject Win;
 
     private int currWave = 0;
     [SerializeField] private LevelConfig Config;
-
-    private void Awake()
-    {
-        Instance = this;
-    }
 
     private void Start()
     {
@@ -27,13 +18,14 @@ public class SceneManager : MonoBehaviour
 
     public void AddEnemie(Enemie enemie)
     {
-        Enemies.Add(enemie);
+        EnemiesManager.AddEnemy(enemie);
     }
 
     public void RemoveEnemie(Enemie enemie)
     {
-        Enemies.Remove(enemie);
-        if(Enemies.Count == 0)
+        EnemiesManager.RemoveEnemy(enemie);
+        Debug.Log(EnemiesManager.Enemies.Count);
+        if(EnemiesManager.Enemies.Count == 0)
         {
             SpawnWave();
         }
@@ -46,6 +38,7 @@ public class SceneManager : MonoBehaviour
 
     private void SpawnWave()
     {
+        Debug.Log(currWave + " - " + Config.Waves.Length);
         if (currWave >= Config.Waves.Length)
         {
             Win.SetActive(true);
@@ -55,11 +48,13 @@ public class SceneManager : MonoBehaviour
         var wave = Config.Waves[currWave];
         foreach (var character in wave.Characters)
         {
-            Vector3 pos = new Vector3(Random.Range(-10, 10), 0, Random.Range(-10, 10));
-            Instantiate(character, pos, Quaternion.identity);
+            for (var i = 0; i < character.Count; i++)
+            {
+                Vector3 pos = new Vector3(Random.Range(-10, 10), 0, Random.Range(-10, 10));
+                Instantiate(character.Prefab, pos, Quaternion.identity);
+            }
         }
         currWave++;
-
     }
 
     public void Reset()

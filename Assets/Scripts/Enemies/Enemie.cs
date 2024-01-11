@@ -9,64 +9,70 @@ public class Enemie : MonoBehaviour
     public float Damage;
     public float AtackSpeed;
     public float AttackRange = 2;
-
+    public bool IsDied => Hp <= 0;
 
     public Animator AnimatorController;
     public NavMeshAgent Agent;
 
     private float lastAttackTime = 0;
-    private bool isDead = false;
 
+    private Player Player;
+    private Vector3 PlayerPosition => Player.transform.position;
 
     private void Start()
     {
         SceneManager.Instance.AddEnemie(this);
-        Agent.SetDestination(SceneManager.Instance.Player.transform.position);
-
+        Player = SceneManager.Instance.Player;
+        Agent.SetDestination(PlayerPosition);
     }
-
-    private void Update()
+    
+    public void Hit(float value)
     {
-        if(isDead)
-        {
-            return;
-        }
-
-        if (Hp <= 0)
+        Hp -= value;
+        if (IsDied)
         {
             Die();
             Agent.isStopped = true;
+        }
+    }
+
+    private void AttackStarted() { }
+    private void AttackPerformed() { }
+    private void AttackEnded() { }
+
+    private void Update()
+    {
+        if(IsDied)
+        {
             return;
         }
 
-        var distance = Vector3.Distance(transform.position, SceneManager.Instance.Player.transform.position);
-     
-        if (distance <= AttackRange)
+        var distance = Vector3.Distance(transform.position, PlayerPosition);
+        var inRange = distance <= AttackRange;
+        Agent.isStopped = inRange;
+        
+        if (inRange)
         {
-            Agent.isStopped = true;
             if (Time.time - lastAttackTime > AtackSpeed)
             {
                 lastAttackTime = Time.time;
-                SceneManager.Instance.Player.Hp -= Damage;
+                Player.Hp -= Damage;
                 AnimatorController.SetTrigger("Attack");
             }
         }
         else
         {
-            Agent.SetDestination(SceneManager.Instance.Player.transform.position);
+            Agent.SetDestination(PlayerPosition);
         }
         AnimatorController.SetFloat("Speed", Agent.speed); 
-        Debug.Log(Agent.speed);
-
     }
 
 
 
-    private void Die()
+    protected virtual void Die()
     {
         SceneManager.Instance.RemoveEnemie(this);
-        isDead = true;
+        Agent.enabled = false;
         AnimatorController.SetTrigger("Die");
     }
-
 }

@@ -1,17 +1,35 @@
-using System.Collections;
-using System.Collections.Generic;
+using System;
+using PlayerComponents;
 using UnityEngine;
 
+[RequireComponent(typeof(CharacterController))]
 public class Player : MonoBehaviour
 {
     public float Hp;
-    public float Damage;
-    public float AtackSpeed;
-    public float AttackRange = 2;
 
+    [SerializeField] private float restoreHpByKill = 2;
+    [SerializeField] private AttackData attackData;
+    [SerializeField] private MovementData movementData;
+    
+    
+    private CharacterController controller;
+    
+    private PlayerInput input;
+    private PlayerMovement movement;
+    private PlayerAttack attack;
+    
     private float lastAttackTime = 0;
     private bool isDead = false;
     public Animator AnimatorController;
+
+    private void Awake()
+    {
+        controller = GetComponent<CharacterController>();
+        
+        input = new PlayerInput();
+        movement = new PlayerMovement(movementData, input, controller, AnimatorController);
+        attack = new PlayerAttack(attackData, transform, AnimatorController, movement);
+    }
 
     private void Update()
     {
@@ -19,57 +37,14 @@ public class Player : MonoBehaviour
         {
             return;
         }
-
+        
         if (Hp <= 0)
         {
             Die();
             return;
         }
-
-
-        var enemies = SceneManager.Instance.Enemies;
-        Enemie closestEnemie = null;
-
-        for (int i = 0; i < enemies.Count; i++)
-        {
-            var enemie = enemies[i];
-            if (enemie == null)
-            {
-                continue;
-            }
-
-            if (closestEnemie == null)
-            {
-                closestEnemie = enemie;
-                continue;
-            }
-
-            var distance = Vector3.Distance(transform.position, enemie.transform.position);
-            var closestDistance = Vector3.Distance(transform.position, closestEnemie.transform.position);
-
-            if (distance < closestDistance)
-            {
-                closestEnemie = enemie;
-            }
-
-        }
-
-        if (closestEnemie != null)
-        {
-            var distance = Vector3.Distance(transform.position, closestEnemie.transform.position);
-            if (distance <= AttackRange)
-            {
-                if (Time.time - lastAttackTime > AtackSpeed)
-                {
-                    //transform.LookAt(closestEnemie.transform);
-                    transform.transform.rotation = Quaternion.LookRotation(closestEnemie.transform.position - transform.position);
-
-                    lastAttackTime = Time.time;
-                    closestEnemie.Hp -= Damage;
-                    AnimatorController.SetTrigger("Attack");
-                }
-            }
-        }
+        
+        TickComponents();
     }
 
     private void Die()
@@ -80,5 +55,32 @@ public class Player : MonoBehaviour
         SceneManager.Instance.GameOver();
     }
 
+    private void TickComponents()
+    {
+        input.Tick();
+        attack.Tick();
+        movement.Tick();
+    }
 
+    private void AttackStarted()
+    {
+        if (attack.EnemiesInRange(out var point))
+        {
+            movement.CanPerformed = false;
+            movement.LookAtPoint = point;
+        }
+    }
+
+    private void AttackPerformed()
+    {
+        attack.AttackPerformed(out var killed);
+        
+        if (killed)
+            Hp += restoreHpByKill;
+    }
+
+    private void AttackEnded()
+    {
+        movement.CanPerformed = true;
+    }
 }

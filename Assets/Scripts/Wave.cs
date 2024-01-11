@@ -1,12 +1,16 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "Wave", menuName = "Data/Waves")]
 [Serializable]
+public class WaveElement
+{
+    [field: SerializeField] public GameObject Prefab { get; private set; }
+    [field: SerializeField] public int Count { get; private set; }
+    
+}
+
+[CreateAssetMenu(fileName = "Wave", menuName = "Data/Waves")]
 public class Wave : ScriptableObject
 {
-
-    public GameObject[] Characters;
+    public WaveElement[] Characters;
 }
